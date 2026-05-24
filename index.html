@@ -174,7 +174,7 @@ function sendAngle(angle) {
   statusEl.className = "status";
   statusEl.textContent = "发送中...";
 
-  new Image().src = API_URL + "?msg=" + angle + "&t=" + Date.now();
+  new Image().src = API_URL + angle + "&t=" + Date.now();
 
   clearTimeout(sendTimer);
   sendTimer = setTimeout(function() {
