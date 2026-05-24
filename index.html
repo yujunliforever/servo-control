@@ -162,7 +162,7 @@ input[type="range"]::-moz-range-thumb {
 <script>
 const UID = "02f9e7dd324f43e982ca59b55c2a7133";
 const TOPIC = "Servo001";
-const API_URL = "https://api.bemfa.com/api/device/v1/data/1/" + UID + "/" + TOPIC + "/";
+const API_URL = "https://apis.bemfa.com/va/sendMessage?uid=" + UID + "&topic=" + TOPIC + "&type=1&msg=";
 
 const slider = document.getElementById("slider");
 const angleDisplay = document.getElementById("angleDisplay");
