@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>舵机远程控制</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -61,16 +61,17 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 6px;
-  border-radius: 3px;
+  height: 8px;
+  border-radius: 4px;
   background: linear-gradient(90deg, #e74c3c, #f39c12, #2ecc71);
   outline: none;
+  touch-action: none;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #fff;
   cursor: pointer;
@@ -81,8 +82,8 @@ input[type="range"]::-webkit-slider-thumb:active {
   transform: scale(1.15);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #fff;
   cursor: pointer;
@@ -104,36 +105,37 @@ input[type="range"]::-moz-range-thumb {
   min-height: 20px;
 }
 .status.success { color: #2ecc71; }
-.status.error { color: #e74c3c; }
-.btn-group {
+.status.active { color: #f39c12; }
+.row {
   display: flex;
   gap: 10px;
-  margin-top: 25px;
+  margin-top: 12px;
 }
-.btn-group button {
+.row button {
   flex: 1;
-  padding: 12px;
+  padding: 14px;
   border: none;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 14px;
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   transition: 0.2s;
 }
-.btn-left {
-  background: rgba(231,76,60,0.2);
-  color: #e74c3c;
-}
-.btn-mid {
-  background: rgba(243,156,18,0.2);
-  color: #f39c12;
-}
-.btn-right {
-  background: rgba(46,204,113,0.2);
-  color: #2ecc71;
-}
-.btn-group button:active {
+.row button:active {
   transform: scale(0.95);
+}
+.btn-0 { background: rgba(231,76,60,0.2); color: #e74c3c; }
+.btn-90 { background: rgba(243,156,18,0.2); color: #f39c12; }
+.btn-180 { background: rgba(46,204,113,0.2); color: #2ecc71; }
+.btn-sweep {
+  background: rgba(155,89,182,0.25);
+  color: #bb8fce;
+  border: 1px solid rgba(155,89,182,0.3);
+}
+.btn-sweep.active {
+  background: rgba(231,76,60,0.25);
+  color: #e74c3c;
+  border-color: rgba(231,76,60,0.3);
 }
 </style>
 </head>
@@ -151,10 +153,13 @@ input[type="range"]::-moz-range-thumb {
       <span>180° (左极限)</span>
     </div>
   </div>
-  <div class="btn-group">
-    <button class="btn-left" onclick="setAngle(0)">0°</button>
-    <button class="btn-mid" onclick="setAngle(90)">90°</button>
-    <button class="btn-right" onclick="setAngle(180)">180°</button>
+  <div class="row">
+    <button class="btn-0" onclick="setAngle(0)">0°</button>
+    <button class="btn-90" onclick="setAngle(90)">90°</button>
+    <button class="btn-180" onclick="setAngle(180)">180°</button>
+  </div>
+  <div class="row">
+    <button class="btn-sweep" id="sweepBtn" onclick="toggleSweep()">▶ 往复运动</button>
   </div>
   <div class="status" id="status">拖动滑块控制舵机</div>
 </div>
@@ -167,20 +172,21 @@ const API_URL = "https://apis.bemfa.com/va/sendMessage?uid=" + UID + "&topic=" +
 const slider = document.getElementById("slider");
 const angleDisplay = document.getElementById("angleDisplay");
 const statusEl = document.getElementById("status");
+const sweepBtn = document.getElementById("sweepBtn");
 
 var sendTimer = null;
+var sweepTimer = null;
+var sweepAngle = 0;
+var sweepDir = 1;
 
 function sendAngle(angle) {
-  statusEl.className = "status";
-  statusEl.textContent = "发送中...";
-
   new Image().src = API_URL + angle + "&t=" + Date.now();
 
   clearTimeout(sendTimer);
   sendTimer = setTimeout(function() {
     statusEl.className = "status success";
     statusEl.textContent = "已发送: " + angle + "°";
-  }, 500);
+  }, 300);
 }
 
 function setAngle(angle) {
@@ -193,6 +199,41 @@ slider.addEventListener("input", function() {
   angleDisplay.textContent = this.value;
   sendAngle(this.value);
 });
+
+function toggleSweep() {
+  if (sweepTimer) {
+    clearInterval(sweepTimer);
+    sweepTimer = null;
+    sweepBtn.textContent = "▶ 往复运动";
+    sweepBtn.classList.remove("active");
+    slider.disabled = false;
+    statusEl.className = "status success";
+    statusEl.textContent = "往复停止";
+    return;
+  }
+
+  sweepBtn.textContent = "■ 停止";
+  sweepBtn.classList.add("active");
+  slider.disabled = true;
+  statusEl.className = "status active";
+  statusEl.textContent = "往复运动中...";
+
+  sweepAngle = 0;
+  sweepDir = 1;
+  setAngle(0);
+
+  sweepTimer = setInterval(function() {
+    sweepAngle += sweepDir * 5;
+    if (sweepAngle >= 180) {
+      sweepAngle = 180;
+      sweepDir = -1;
+    } else if (sweepAngle <= 0) {
+      sweepAngle = 0;
+      sweepDir = 1;
+    }
+    setAngle(sweepAngle);
+  }, 200);
+}
 </script>
 </body>
 </html>
