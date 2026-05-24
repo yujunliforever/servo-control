@@ -167,22 +167,20 @@ const API_URL = "https://api.bemfa.com/api/device/v1/data/1/" + UID + "/" + TOPI
 const slider = document.getElementById("slider");
 const angleDisplay = document.getElementById("angleDisplay");
 const statusEl = document.getElementById("status");
-let lastSend = 0;
+
+var sendTimer = null;
 
 function sendAngle(angle) {
-  const now = Date.now();
-  if (now - lastSend < 100) return;
-  lastSend = now;
+  statusEl.className = "status";
+  statusEl.textContent = "发送中...";
 
-  fetch(API_URL + "?msg=" + angle, { method: "GET", mode: "no-cors" })
-    .then(function() {
-      statusEl.className = "status success";
-      statusEl.textContent = "已发送: " + angle + "°";
-    })
-    .catch(function() {
-      statusEl.className = "status error";
-      statusEl.textContent = "发送失败";
-    });
+  new Image().src = API_URL + "?msg=" + angle + "&t=" + Date.now();
+
+  clearTimeout(sendTimer);
+  sendTimer = setTimeout(function() {
+    statusEl.className = "status success";
+    statusEl.textContent = "已发送: " + angle + "°";
+  }, 500);
 }
 
 function setAngle(angle) {
